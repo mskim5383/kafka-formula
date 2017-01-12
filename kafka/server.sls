@@ -37,9 +37,10 @@ kafka-service-script:
 kafka-service:
   service.running:
     - name: kafka
-    - enable: True
+    - enable: true
     - require:
       - pkg: confluent-kafka-2.11
       - file: kafka-config
       - file: kafka-environment
       - file: kafka-systemd-unit
+      - file: kafka-service-script
