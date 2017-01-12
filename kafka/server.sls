@@ -7,6 +7,7 @@ kafka-systemd-unit:
   file.managed:
     - name: /lib/systemd/system/kafka.service
     - source: salt://kafka/files/kafka.service.systemd
+    - makedirs: True
 
 kafka-config:
   file.managed:
@@ -22,6 +23,15 @@ kafka-environment:
   file.managed:
     - name: /etc/default/kafka
     - source: salt://kafka/files/kafka.default
+    - template: jinja
+
+kafka-service-script:
+  file.managed:
+    - name: /etc/init.d/kafka
+    - source: salt://kafka/files/kafka.init.d
+    - user: kafka
+    - group: kafka
+    - mode: 755
     - template: jinja
 
 kafka-service:

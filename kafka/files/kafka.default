@@ -1,9 +1,9 @@
 {%- from 'kafka/settings.sls' import kafka with context %}
 
-JAVA_HOME=/usr/lib/java
+JAVA_HOME=/usr/lib/jvm/jre
 
 # whether to allow init.d script to start a kafka broker ("yes", "no")
-KAFKA_START=no
+KAFKA_START=yes
 
 # User and group to run as
 KAFKA_USER=kafka
