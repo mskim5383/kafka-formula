@@ -1,9 +1,16 @@
 #!/bin/bash
 
+#
+# Kafka
+#
+# chkconfig: 2346 90 8
+# description: kafka
+
 KAFKA_HOME=/usr
 KAFKA_USER=kafka
-KAFKA_SCRIPT=$KAFKA_HOME/bin/kafka-server-start
-KAFKA_CONFIG=/etc/kafka/server.properties
+KAFKA_SCRIPT={{ alt_home }}/bin/kafka-server-start.sh
+KAFKA_STOP_SCRIPT={{ alt_home }}/bin/kafka-server-stop.sh
+KAFKA_CONFIG={{ alt_config }}/server.properties
 KAFKA_CONSOLE_LOG=/var/log/kafka/console.log
 
 
@@ -15,71 +22,39 @@ RETVAL=0
 STARTUP_WAIT=30
 SHUTDOWN_WAIT=30
 
-KAFKA_PIDFILE=/var/run/kafka/kafka.pid
 
 
 # Source function library.
 . /etc/init.d/functions
 
 start() {
-  echo -n $"Starting $prog: "
+        echo -n $"Starting $prog: "
 
-        # Create pid file
-        if [ -f $KAFKA_PIDFILE ]; then
-                read ppid < $KAFKA_PIDFILE
-                if [ `ps --pid $ppid 2> /dev/null | grep -c $ppid 2> /dev/null` -eq '1' ]; then
-                        echo -n "$prog is already running"
-                        failure
-                        echo
-                        return 1
-                else
-                      rm -f $KAFKA_PIDFILE
-                fi
+        PIDS=$(ps ax | grep -i 'kafka\.Kafka' | grep java | grep -v grep | awk '{print $1}')
+
+        if [ ! -z "$PIDS" ]; then
+              echo "$prog is running (pid $PIDS)"
+              return 1
         fi
 
-        rm -f $KAFKA_CONSOLE_LOG
-        mkdir -p $(dirname $KAFKA_PIDFILE)
-        chown $KAFKA_USER $(dirname $KAFKA_PIDFILE) || true
-  
         # Run daemon
         cd $KAFKA_HOME
-        nohup sh $KAFKA_SCRIPT $KAFKA_CONFIG 2>&1 >> $KAFKA_CONSOLE_LOG 2>&1 &
-        PID=$!
+        sh $KAFKA_SCRIPT -daemon $KAFKA_CONFIG 2>&1 &
         RETVAL=$?
-        echo $PID > $KAFKA_PIDFILE
 
-  
         success
         echo
-        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/kafka
+        touch /var/lock/subsys/kafka
         return $RETVAL
 }
 
 
 stop() {
         echo -n $"Stopping $prog: "
-        count=0;
 
-        if [ -f $KAFKA_PIDFILE ]; then
-                read kpid < $KAFKA_PIDFILE
-                let kwait=$SHUTDOWN_WAIT
-
-                # Try issuing SIGTERM
-                kill -15 $kpid
-                until [ `ps --pid $kpid 2> /dev/null | grep -c $kpid 2> /dev/null` -eq '0' ] || [ $count -gt $kwait ]
-                        do
-                        sleep 1
-                        let count=$count+1;
-                done
-
-                if [ $count -gt $kwait ]; then
-                        kill -9 $kpid
-                fi
-        fi
+        sh $KAFKA_STOP_SCRIPT
 
         rm -f /var/lock/subsys/kafka
-        rm -f $KAFKA_PIDFILE
-        rm -f $KAFKA_CONSOLE_LOG
         success
         echo
 }
@@ -95,18 +70,15 @@ restart() {
 }
 
 status() {
-        if [ -f $KAFKA_PIDFILE ]; then
-                read ppid < $KAFKA_PIDFILE
-                if [ `ps --pid $ppid 2> /dev/null | grep -c $ppid 2> /dev/null` -eq '1' ]; then
-                        echo "$prog is running (pid $ppid)"
-                        return 0
-                else
-                      echo "$prog dead but pid file exists"
-                        return 1
-                fi
+        PIDS=$(ps ax | grep -i 'kafka\.Kafka' | grep java | grep -v grep | awk '{print $1}')
+
+        if [ -z "$PIDS" ]; then
+              echo "$prog is not running"
+              return 3
+        else 
+              echo "$prog is running (pid $PIDS)"
+              return 0
         fi
-        echo "$prog is not running"
-        return 3
 }
 
 case "$1" in
